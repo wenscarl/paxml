@@ -536,6 +536,7 @@ class TransformerLmSpmdAdafactor(base_experiment.BaseExperiment):
   USE_GATED_ACTIVATION = False
   DECAY_END = 100000
   USE_FP8 = False
+  FP8_EVAL = False
 
   # optimizer related
   DROPOUT_PROB = 0.0
@@ -624,14 +625,18 @@ class TransformerLmSpmdAdafactor(base_experiment.BaseExperiment):
 
     if self.USE_FP8:
       transformer_layer_p.tr_atten_tpl.proj_tpl.einsum_tpl = pax_fiddle.Config(
-          fp8_ops.Fp8EinsumOp
+          fp8_ops.Fp8EinsumOp,
       )
       transformer_layer_p.tr_atten_tpl.combined_qkv_proj_tpl.einsum_tpl = (
-          pax_fiddle.Config(fp8_ops.Fp8EinsumOp)
+          pax_fiddle.Config(fp8_ops.Fp8EinsumOp),
       )
       transformer_layer_p.tr_fflayer_tpl.fflayer_tpl.linear_tpl.einsum_tpl = (
-          pax_fiddle.Config(fp8_ops.Fp8EinsumOp)
+          pax_fiddle.Config(fp8_ops.Fp8EinsumOp),
       )
+      if self.FP8_EVAL:
+        transformer_layer_p.tr_atten_tpl.proj_tpl.einsum_tpl.force_eval_mode = True
+        transformer_layer_p.tr_atten_tpl.combined_qkv_proj_tpl.einsum_tpl = True
+        transformer_layer_p.tr_fflayer_tpl.fflayer_tpl.linear_tpl.einsum_tpl = True
 
     transformer_layer_p.tr_fflayer_tpl.activation_tpl = pax_fiddle.Config(
         self.ACTIVATION_CLS
